@@ -1,0 +1,28 @@
+services:
+  backend:
+    build: ./backend
+    environment:
+      DATA_DIR: /app/data
+      DEMO_LLM_MODE: ${DEMO_LLM_MODE:-fixture}
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+    volumes:
+      - app_data:/app/data
+      - ./demo_data:/app/demo_data:ro
+    ports:
+      - "8000:8000"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  frontend:
+    build: ./frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "3000:3000"
+volumes:
+  app_data:
+

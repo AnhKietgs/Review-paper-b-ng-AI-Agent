@@ -2,6 +2,7 @@
 
 from io import BytesIO
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 import pymupdf
 import pytest
@@ -25,17 +26,25 @@ def client(tmp_path: Path, monkeypatch):
 def paper(client: TestClient, title: str) -> str:
     document = pymupdf.open()
     document.new_page().insert_text((72, 72), f"Evidence from {title}.")
-    response = client.post("/api/v1/papers", data={"title": title}, files={
-        "file": ("paper.pdf", BytesIO(document.tobytes()), "application/pdf"),
-    })
+    response = client.post(
+        "/api/v1/papers",
+        data={"title": title},
+        files={
+            "file": ("paper.pdf", BytesIO(document.tobytes()), "application/pdf"),
+        },
+    )
     assert response.status_code == 201, response.text
     return response.json()["id"]
 
 
 def rubric(client: TestClient) -> str:
-    response = client.post("/api/v1/rubrics", json={
-        "name": "General", "criteria": [{"code": "method", "question": "Is it sound?"}],
-    })
+    response = client.post(
+        "/api/v1/rubrics",
+        json={
+            "name": "General",
+            "criteria": [{"code": "method", "question": "Is it sound?"}],
+        },
+    )
     assert response.status_code == 201
     return response.json()["id"]
 
@@ -44,33 +53,52 @@ def test_review_crud_and_revision_snapshot(client: TestClient):
     main_id = paper(client, "main")
     ref_id = paper(client, "reference")
     rubric_id = rubric(client)
-    created = client.post("/api/v1/reviews", json={
-        "paper_id": main_id, "rubric_id": rubric_id,
-        "reference_paper_ids": [ref_id],
-    })
+    created = client.post(
+        "/api/v1/reviews",
+        json={
+            "paper_id": main_id,
+            "rubric_id": rubric_id,
+            "reference_paper_ids": [ref_id],
+        },
+    )
     assert created.status_code == 201, created.text
     review_id = created.json()["id"]
     assert created.headers["location"].endswith(review_id)
     assert created.json()["references"][0]["paper_content_version"] == 1
     assert client.get("/api/v1/reviews").json()["total"] == 1
 
-    changed = client.patch(f"/api/v1/reviews/{review_id}", json={
-        "summary": "Human edited summary", "findings": [{
-            "criterion_code": "method", "claim": "A specific human note",
-            "evidence": [], "status": "needs_human_review",
-        }],
-    })
+    changed = client.patch(
+        f"/api/v1/reviews/{review_id}",
+        json={
+            "summary": "Human edited summary",
+            "findings": [
+                {
+                    "criterion_code": "method",
+                    "claim": "A specific human note",
+                    "evidence": [],
+                    "status": "needs_human_review",
+                }
+            ],
+        },
+    )
     assert changed.status_code == 200, changed.text
     assert changed.json()["findings"][0]["claim"] == "A specific human note"
 
     updated_doc = pymupdf.open()
     updated_doc.new_page().insert_text((72, 72), "Updated reference evidence.")
-    replacement = client.patch(f"/api/v1/papers/{ref_id}", files={
-        "file": ("new.pdf", BytesIO(updated_doc.tobytes()), "application/pdf"),
-    })
+    replacement = client.patch(
+        f"/api/v1/papers/{ref_id}",
+        files={
+            "file": ("new.pdf", BytesIO(updated_doc.tobytes()), "application/pdf"),
+        },
+    )
     assert replacement.status_code == 200
-    assert client.get(f"/api/v1/reviews/{review_id}").json()["references"][0][
-        "paper_content_version"] == 1
+    assert (
+        client.get(f"/api/v1/reviews/{review_id}").json()["references"][0][
+            "paper_content_version"
+        ]
+        == 1
+    )
 
     revision = client.post(f"/api/v1/reviews/{review_id}/revisions")
     assert revision.status_code == 201
@@ -88,13 +116,47 @@ def test_invalid_reference_selection(client: TestClient):
     ref_id = paper(client, "reference")
     rubric_id = rubric(client)
     base = {"paper_id": main_id, "rubric_id": rubric_id}
-    assert client.post("/api/v1/reviews", json={
-        **base, "reference_paper_ids": [main_id],
-    }).status_code == 422
-    assert client.post("/api/v1/reviews", json={
-        **base, "reference_paper_ids": [ref_id, ref_id],
-    }).status_code == 422
+    assert (
+        client.post(
+            "/api/v1/reviews",
+            json={
+                **base,
+                "reference_paper_ids": [main_id],
+            },
+        ).status_code
+        == 422
+    )
+    assert (
+        client.post(
+            "/api/v1/reviews",
+            json={
+                **base,
+                "reference_paper_ids": [ref_id, ref_id],
+            },
+        ).status_code
+        == 422
+    )
     assert client.delete(f"/api/v1/papers/{ref_id}").status_code == 204
-    assert client.post("/api/v1/reviews", json={
-        **base, "reference_paper_ids": [ref_id],
-    }).status_code == 404
+    assert (
+        client.post(
+            "/api/v1/reviews",
+            json={
+                **base,
+                "reference_paper_ids": [ref_id],
+            },
+        ).status_code
+        == 404
+    )
+
+
+def test_concurrent_revision_forks_get_distinct_monotonic_numbers(client: TestClient):
+    main_id = paper(client, "main")
+    rubric_id = rubric(client)
+    review = client.post(
+        "/api/v1/reviews", json={"paper_id": main_id, "rubric_id": rubric_id}
+    ).json()
+    path = f"/api/v1/reviews/{review['id']}/revisions"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(lambda _: client.post(path), range(2)))
+    assert [response.status_code for response in responses] == [201, 201]
+    assert sorted(response.json()["revision"] for response in responses) == [2, 3]

@@ -16,6 +16,8 @@ class FindingInput(BaseModel):
 
     id: str | None = None
     criterion_code: str = "general"
+    kind: str = "analysis"
+    compared_paper_ids: list[str] = Field(default_factory=list)
     claim: str = Field(min_length=1)
     evidence: list[dict] = Field(default_factory=list)
     status: str = "pending"
@@ -69,4 +71,3 @@ class ReviewPage(BaseModel):
     total: int
     limit: int
     offset: int
-

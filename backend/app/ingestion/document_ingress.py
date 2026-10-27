@@ -22,16 +22,23 @@ class DocumentIngress:
         self.converter = converter or MarkItDownAdapter()
 
     def ingest(
-        self, file_path: Path, paper_id: UUID, content_version: int,
+        self,
+        file_path: Path,
+        paper_id: UUID,
+        content_version: int,
     ) -> IngestedDocument:
         """Accept a text PDF or DOCX and return versioned chunks."""
         extension = file_path.suffix.lower()
         if extension not in {".pdf", ".docx"}:
             raise IngestionError("Only PDF and DOCX are supported")
-        source_sections = (
-            extract_pdf_pages(file_path) if extension == ".pdf"
-            else extract_docx_paragraphs(file_path)
-        )
+        try:
+            source_sections = (
+                extract_pdf_pages(file_path)
+                if extension == ".pdf"
+                else extract_docx_paragraphs(file_path)
+            )
+        except Exception as exc:
+            raise IngestionError("Cannot read the original document") from exc
         if not any(text.strip() for _, text, _ in source_sections):
             raise IngestionError("Document has no readable text layer")
         try:
@@ -42,7 +49,10 @@ class DocumentIngress:
             raise IngestionError("Document conversion produced no text layer")
         source_hash = hashlib.sha256(file_path.read_bytes()).hexdigest()
         chunks, locators = chunk_source(
-            markdown, source_sections, paper_id, content_version, source_hash,
+            markdown,
+            source_sections,
+            paper_id,
+            content_version,
+            source_hash,
         )
         return IngestedDocument(markdown, chunks, locators, source_hash)
-

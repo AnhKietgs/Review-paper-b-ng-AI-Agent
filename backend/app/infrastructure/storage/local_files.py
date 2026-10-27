@@ -33,4 +33,3 @@ class LocalFileStore:
         destination = directory / f"v{version}.md"
         destination.write_text(text, encoding="utf-8")
         return destination
-

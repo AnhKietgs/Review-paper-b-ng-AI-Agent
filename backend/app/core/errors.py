@@ -28,4 +28,3 @@ class ValidationError(DomainError):
     """Input violates a domain rule."""
 
     status_code = 422
-

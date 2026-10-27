@@ -40,3 +40,17 @@ max-line-length = 88
 [tool.pycodestyle]
 max-line-length = 88
 
+# DTOs, protocols and adapters intentionally have small public interfaces.
+[tool.pylint.messages_control]
+disable = ["too-few-public-methods", "duplicate-code"]
+
+[tool.pylint.design]
+max-args = 8
+max-positional-arguments = 8
+max-attributes = 10
+max-locals = 20
+max-branches = 16
+
+[tool.pylint.basic]
+good-names = ["OUTPUT_SCHEMA"]
+

@@ -30,4 +30,3 @@ def get_uow() -> Generator[UnitOfWork, None, None]:
     """FastAPI dependency that closes each request transaction."""
     with UnitOfWork() as unit:
         yield unit
-

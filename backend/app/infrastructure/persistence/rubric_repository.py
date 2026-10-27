@@ -16,24 +16,47 @@ class SqlRubricRepository:
 
     def get(self, rubric_id: str) -> RubricRow | None:
         """Read one active rubric."""
-        return self.session.scalar(select(RubricRow).where(
-            RubricRow.id == rubric_id, RubricRow.deleted_at.is_(None),
-        ))
+        return self.session.scalar(
+            select(RubricRow).where(
+                RubricRow.id == rubric_id,
+                RubricRow.deleted_at.is_(None),
+            )
+        )
 
     def list(self, limit: int, offset: int) -> tuple[list[RubricRow], int]:
         """Paginate active rubric heads."""
-        rows = list(self.session.scalars(select(RubricRow).where(
-            RubricRow.deleted_at.is_(None),
-        ).order_by(RubricRow.created_at.desc()).limit(limit).offset(offset)))
-        total = self.session.scalar(select(func.count()).select_from(RubricRow).where(
-            RubricRow.deleted_at.is_(None),
-        )) or 0
+        rows = list(
+            self.session.scalars(
+                select(RubricRow)
+                .where(
+                    RubricRow.deleted_at.is_(None),
+                )
+                .order_by(RubricRow.created_at.desc())
+                .limit(limit)
+                .offset(offset)
+            )
+        )
+        total = (
+            self.session.scalar(
+                select(func.count())
+                .select_from(RubricRow)
+                .where(
+                    RubricRow.deleted_at.is_(None),
+                )
+            )
+            or 0
+        )
         return rows, total
 
     def criteria(self, rubric_id: str, version: int) -> list[CriterionRow]:
         """Read the criteria frozen in a rubric version."""
-        return list(self.session.scalars(select(CriterionRow).where(
-            CriterionRow.rubric_id == rubric_id,
-            CriterionRow.rubric_version == version,
-        ).order_by(CriterionRow.order_index)))
-
+        return list(
+            self.session.scalars(
+                select(CriterionRow)
+                .where(
+                    CriterionRow.rubric_id == rubric_id,
+                    CriterionRow.rubric_version == version,
+                )
+                .order_by(CriterionRow.order_index)
+            )
+        )

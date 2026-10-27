@@ -46,4 +46,3 @@ class PaperPage(BaseModel):
     total: int
     limit: int
     offset: int
-

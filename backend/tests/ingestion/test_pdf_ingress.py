@@ -3,14 +3,14 @@
 from pathlib import Path
 from uuid import uuid4
 
-import fitz
+import pymupdf
 import pytest
 
 from app.ingestion.document_ingress import DocumentIngress, IngestionError
 
 
 def make_pdf(path: Path, pages: list[str]) -> None:
-    document = fitz.open()
+    document = pymupdf.open()
     for text in pages:
         page = document.new_page()
         if text:
@@ -23,7 +23,9 @@ def test_pdf_page_two_is_original_source(tmp_path: Path):
     make_pdf(source, ["Introduction and methods.", "Distinct result on page two."])
     result = DocumentIngress().ingest(source, uuid4(), 1)
     assert "Distinct result" in result.markdown
-    chunk = next(chunk for chunk in result.chunks if "Distinct result" in chunk.markdown_text)
+    chunk = next(
+        chunk for chunk in result.chunks if "Distinct result" in chunk.markdown_text
+    )
     locator = next(item for item in result.locators if item.chunk_id == chunk.id)
     assert locator.locator_type == "pdf_page"
     assert locator.locator_value == "2"
@@ -42,4 +44,3 @@ def test_duplicate_quote_cannot_be_safely_located(tmp_path: Path):
     make_pdf(source, ["Identical finding.", "Identical finding."])
     result = DocumentIngress().ingest(source, uuid4(), 1)
     assert all(locator.status == "unresolved_locator" for locator in result.locators)
-

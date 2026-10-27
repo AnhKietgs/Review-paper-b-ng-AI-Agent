@@ -13,4 +13,3 @@ def extract_docx_paragraphs(path: Path) -> list[tuple[str, str, str]]:
         for index, paragraph in enumerate(document.paragraphs)
         if paragraph.text.strip()
     ]
-

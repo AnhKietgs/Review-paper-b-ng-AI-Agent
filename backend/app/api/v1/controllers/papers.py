@@ -27,8 +27,10 @@ def create_paper(
     """Create from multipart metadata and a source document."""
     try:
         metadata = PaperCreate(
-            title=title, authors=[item.strip() for item in authors.split(",") if item.strip()],
-            year=year, doi=doi,
+            title=title,
+            authors=[item.strip() for item in authors.split(",") if item.strip()],
+            year=year,
+            doi=doi,
         )
     except PydanticValidationError as exc:
         raise ValidationError("invalid_paper", str(exc)) from exc
@@ -39,7 +41,8 @@ def create_paper(
 
 @router.get("", response_model=PaperPage)
 def list_papers(
-    limit: int = Query(20, ge=1, le=100), offset: int = Query(0, ge=0),
+    limit: int = Query(20, ge=1, le=100),
+    offset: int = Query(0, ge=0),
     unit: UnitOfWork = Depends(get_uow),
 ):
     """List active library papers."""
@@ -53,18 +56,32 @@ def get_paper(paper_id: str, unit: UnitOfWork = Depends(get_uow)):
 
 
 @router.get("/{paper_id}/source")
-def get_paper_source(paper_id: str, unit: UnitOfWork = Depends(get_uow)):
+def get_paper_source(
+    paper_id: str,
+    version: int | None = Query(None, ge=1),
+    unit: UnitOfWork = Depends(get_uow),
+):
     """Open the original source in the browser for checking evidence."""
-    service = PaperService(unit.session)
-    service.get(paper_id)
-    row = service.repository.get(paper_id)
-    return FileResponse(row.file_path, media_type=row.media_type,
-                        filename=row.original_filename)
+    row = PaperService(unit.session).source(paper_id, version)
+    return FileResponse(
+        row.file_path,
+        media_type=row.media_type,
+        filename=row.original_filename,
+        content_disposition_type="inline",
+    )
+
+
+@router.get("/{paper_id}/versions/{version}", response_model=PaperRead)
+def get_paper_version(paper_id: str, version: int, unit: UnitOfWork = Depends(get_uow)):
+    """Retrieve the frozen content used by a finding."""
+    return PaperService(unit.session).get_version(paper_id, version)
 
 
 @router.patch("/{paper_id}", response_model=PaperRead)
 async def update_paper(
-    paper_id: str, request: Request, unit: UnitOfWork = Depends(get_uow),
+    paper_id: str,
+    request: Request,
+    unit: UnitOfWork = Depends(get_uow),
 ):
     """Map JSON metadata or multipart replacement to PaperService."""
     content_type = request.headers.get("content-type", "")
@@ -73,9 +90,9 @@ async def update_paper(
         if content_type.startswith("multipart/form-data"):
             form = await request.form()
             upload = form.get("file")
-            changes = PaperUpdate(**{
-                key: form[key] for key in ("title", "doi") if key in form
-            })
+            changes = PaperUpdate(
+                **{key: form[key] for key in ("title", "doi") if key in form}
+            )
         else:
             changes = PaperUpdate.model_validate(await request.json())
     except (PydanticValidationError, ValueError) as exc:
@@ -88,4 +105,3 @@ def delete_paper(paper_id: str, unit: UnitOfWork = Depends(get_uow)):
     """Soft delete a paper."""
     PaperService(unit.session).delete(paper_id)
     return Response(status_code=204)
-

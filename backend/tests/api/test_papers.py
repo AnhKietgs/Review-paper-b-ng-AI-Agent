@@ -34,8 +34,13 @@ def test_paper_crud_and_content_versions(client: TestClient):
     created = client.post(
         "/api/v1/papers",
         data={"title": "A main paper", "authors": "Alice, Bob"},
-        files={"file": ("paper.pdf", BytesIO(pdf_bytes("Original evidence.")),
-                        "application/pdf")},
+        files={
+            "file": (
+                "paper.pdf",
+                BytesIO(pdf_bytes("Original evidence.")),
+                "application/pdf",
+            )
+        },
     )
     assert created.status_code == 201, created.text
     paper_id = created.json()["id"]
@@ -49,23 +54,46 @@ def test_paper_crud_and_content_versions(client: TestClient):
 
     replaced = client.patch(
         f"/api/v1/papers/{paper_id}",
-        files={"file": ("new.pdf", BytesIO(pdf_bytes("New evidence.")),
-                        "application/pdf")},
+        files={
+            "file": ("new.pdf", BytesIO(pdf_bytes("New evidence.")), "application/pdf")
+        },
     )
     assert replaced.status_code == 200, replaced.text
     assert replaced.json()["content_version"] == 2
     with get_engine().connect() as connection:
         versions = connection.execute(select(ChunkRow.content_version)).scalars().all()
     assert set(versions) == {1, 2}
+    old = client.get(f"/api/v1/papers/{paper_id}/versions/1")
+    assert old.status_code == 200
+    assert "Original evidence" in old.json()["markdown"]
+    original = client.get(f"/api/v1/papers/{paper_id}/source?version=1")
+    assert original.status_code == 200
+    assert (
+        "Original evidence"
+        in pymupdf.open(stream=original.content, filetype="pdf")[0].get_text()
+    )
 
     assert client.delete(f"/api/v1/papers/{paper_id}").status_code == 204
     assert client.get(f"/api/v1/papers/{paper_id}").status_code == 404
     assert client.get("/api/v1/papers").json()["total"] == 0
+    # Frozen source routes remain available to verify historical review evidence.
+    assert client.get(f"/api/v1/papers/{paper_id}/versions/1").status_code == 200
+    assert client.get(f"/api/v1/papers/{paper_id}/source?version=1").status_code == 200
 
 
 def test_rejects_unsupported_upload(client: TestClient):
     response = client.post(
-        "/api/v1/papers", data={"title": "Bad"},
+        "/api/v1/papers",
+        data={"title": "Bad"},
         files={"file": ("bad.txt", b"text", "text/plain")},
+    )
+    assert response.status_code == 422
+
+
+def test_corrupt_file_is_a_validation_error(client: TestClient):
+    response = client.post(
+        "/api/v1/papers",
+        data={"title": "Corrupt"},
+        files={"file": ("corrupt.pdf", b"not a PDF", "application/pdf")},
     )
     assert response.status_code == 422

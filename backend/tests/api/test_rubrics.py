@@ -26,24 +26,35 @@ def criterion(code: str, question: str) -> dict:
 
 
 def test_rubric_crud_preserves_old_criteria(client: TestClient):
-    created = client.post("/api/v1/rubrics", json={
-        "name": "Methods rubric", "description": "Qualitative review",
-        "criteria": [criterion("method", "Is the method clear?")],
-    })
+    created = client.post(
+        "/api/v1/rubrics",
+        json={
+            "name": "Methods rubric",
+            "description": "Qualitative review",
+            "criteria": [criterion("method", "Is the method clear?")],
+        },
+    )
     assert created.status_code == 201, created.text
     rubric_id = created.json()["id"]
     assert created.headers["location"].endswith(rubric_id)
     assert client.get("/api/v1/rubrics").json()["total"] == 1
     assert client.get(f"/api/v1/rubrics/{rubric_id}").json()["version"] == 1
 
-    changed = client.patch(f"/api/v1/rubrics/{rubric_id}", json={
-        "criteria": [criterion("method", "Is the sample justified?"),
-                     criterion("limits", "Are limitations clear?")],
-    })
+    changed = client.patch(
+        f"/api/v1/rubrics/{rubric_id}",
+        json={
+            "criteria": [
+                criterion("method", "Is the sample justified?"),
+                criterion("limits", "Are limitations clear?"),
+            ],
+        },
+    )
     assert changed.status_code == 200
     assert changed.json()["version"] == 2
     with get_engine().connect() as connection:
-        versions = connection.execute(select(CriterionRow.rubric_version)).scalars().all()
+        versions = (
+            connection.execute(select(CriterionRow.rubric_version)).scalars().all()
+        )
     assert sorted(versions) == [1, 2, 2]
 
     assert client.delete(f"/api/v1/rubrics/{rubric_id}").status_code == 204
@@ -51,7 +62,11 @@ def test_rubric_crud_preserves_old_criteria(client: TestClient):
 
 
 def test_duplicate_criterion_code_is_invalid(client: TestClient):
-    response = client.post("/api/v1/rubrics", json={
-        "name": "Bad", "criteria": [criterion("x", "First"), criterion("x", "Second")],
-    })
+    response = client.post(
+        "/api/v1/rubrics",
+        json={
+            "name": "Bad",
+            "criteria": [criterion("x", "First"), criterion("x", "Second")],
+        },
+    )
     assert response.status_code == 422

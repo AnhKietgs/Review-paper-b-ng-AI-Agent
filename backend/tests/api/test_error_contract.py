@@ -41,12 +41,22 @@ def test_domain_errors_map_to_rest_status():
 def test_migration_creates_core_tables(tmp_path: Path):
     database_url = f"sqlite:///{tmp_path / 'fresh.sqlite3'}"
     config = Config(str(Path(__file__).parents[2] / "alembic.ini"))
-    config.set_main_option("script_location", str(Path(__file__).parents[2] / "migrations"))
+    config.set_main_option(
+        "script_location", str(Path(__file__).parents[2] / "migrations")
+    )
     config.set_main_option("sqlalchemy.url", database_url)
     command.upgrade(config, "head")
     tables = set(inspect(create_engine(database_url)).get_table_names())
     assert {
-        "papers", "paper_chunks", "source_locators", "rubrics", "criteria",
-        "reviews", "review_references", "findings", "runs", "run_events",
+        "papers",
+        "paper_chunks",
+        "source_locators",
+        "rubrics",
+        "criteria",
+        "reviews",
+        "review_references",
+        "findings",
+        "runs",
+        "run_events",
         "run_checkpoints",
     } <= tables

@@ -27,4 +27,3 @@ class IngestedDocument:
     chunks: list[PaperChunk]
     locators: list[SourceLocator]
     source_file_hash: str
-

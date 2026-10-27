@@ -10,4 +10,3 @@ class FindingStatus(StrEnum):
     SUPPORTED = "supported"
     UNSUPPORTED = "unsupported"
     NEEDS_HUMAN_REVIEW = "needs_human_review"
-

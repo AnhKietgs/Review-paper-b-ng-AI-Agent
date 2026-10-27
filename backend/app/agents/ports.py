@@ -1,0 +1,22 @@
+"""Provider-neutral structured generation interface."""
+
+from typing import Protocol, TypeVar
+
+from pydantic import BaseModel
+
+OutputModel = TypeVar("OutputModel", bound=BaseModel)
+Message = dict[str, str]
+
+
+class LLMPort(Protocol):
+    """The sole model interface available to graph nodes."""
+
+    def generate_json(
+        self, messages: list[Message], schema: type[OutputModel]
+    ) -> OutputModel:
+        """Generate and validate one structured model response."""
+        ...
+
+
+class LLMFailure(RuntimeError):
+    """Sanitized provider failure safe to expose to a run trace."""

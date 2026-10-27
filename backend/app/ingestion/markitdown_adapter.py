@@ -12,4 +12,3 @@ class MarkItDownAdapter:
         """Convert a local upload with MarkItDown."""
         result = MarkItDown().convert(str(path))
         return (result.text_content or "").strip()
-

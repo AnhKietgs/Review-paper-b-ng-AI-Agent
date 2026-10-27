@@ -3,7 +3,7 @@
 from functools import lru_cache
 
 from sqlalchemy import create_engine, event
-from sqlalchemy.orm import Session, sessionmaker
+from sqlalchemy.orm import sessionmaker
 
 from app.core.config import Settings
 
@@ -25,7 +25,6 @@ def get_engine():
     return engine
 
 
-def session_factory() -> sessionmaker[Session]:
+def session_factory() -> sessionmaker:
     """Produce sessions without sharing transactions across requests."""
     return sessionmaker(bind=get_engine(), expire_on_commit=False)
-

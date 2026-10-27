@@ -16,7 +16,9 @@ def locate_span(markdown: str, text: str) -> tuple[int, int] | None:
     """Resolve a unique source quote in the normalized document."""
     if not text.strip():
         return None
-    matches = list(re.finditer(_whitespace_pattern(text), markdown, flags=re.IGNORECASE))
+    matches = list(
+        re.finditer(_whitespace_pattern(text), markdown, flags=re.IGNORECASE)
+    )
     if len(matches) != 1:
         return None
     return matches[0].span()
@@ -38,24 +40,27 @@ def chunk_source(
         span = locate_span(markdown, text)
         start, end = span if span is not None else (0, 0)
         chunk_id = uuid4()
-        chunks.append(PaperChunk(
-            id=chunk_id,
-            paper_id=paper_id,
-            content_version=content_version,
-            order_index=len(chunks),
-            markdown_text=markdown[start:end] if span else text,
-            text_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
-            markdown_start=start,
-            markdown_end=end,
-        ))
-        locators.append(SourceLocator(
-            id=uuid4(),
-            chunk_id=chunk_id,
-            locator_type=locator_type,
-            locator_value=locator_value,
-            quote=text[:300],
-            source_file_hash=source_file_hash,
-            status="resolved" if span else "unresolved_locator",
-        ))
+        chunks.append(
+            PaperChunk(
+                id=chunk_id,
+                paper_id=paper_id,
+                content_version=content_version,
+                order_index=len(chunks),
+                markdown_text=markdown[start:end] if span else text,
+                text_hash=hashlib.sha256(text.encode("utf-8")).hexdigest(),
+                markdown_start=start,
+                markdown_end=end,
+            )
+        )
+        locators.append(
+            SourceLocator(
+                id=uuid4(),
+                chunk_id=chunk_id,
+                locator_type=locator_type,
+                locator_value=locator_value,
+                quote=text[:300],
+                source_file_hash=source_file_hash,
+                status="resolved" if span else "unresolved_locator",
+            )
+        )
     return chunks, locators
-

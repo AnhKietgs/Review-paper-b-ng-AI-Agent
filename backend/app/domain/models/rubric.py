@@ -11,4 +11,3 @@ class Criterion:
     question: str
     guidance: str
     order_index: int
-

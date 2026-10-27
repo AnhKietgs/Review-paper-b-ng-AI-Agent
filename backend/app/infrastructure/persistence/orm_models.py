@@ -3,7 +3,15 @@
 from datetime import datetime, timezone
 
 from sqlalchemy import (
-    JSON, DateTime, ForeignKey, Integer, String, Text, UniqueConstraint,
+    JSON,
+    DateTime,
+    ForeignKey,
+    Index,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
@@ -32,11 +40,28 @@ class PaperRow(Base):
     markdown_path: Mapped[str] = mapped_column(Text)
     content_version: Mapped[int] = mapped_column(Integer, default=1)
     conversion_status: Mapped[str] = mapped_column(String(30), default="ready")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now, onupdate=utc_now,
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
+
+
+class PaperVersionRow(Base):
+    """Immutable original file and Markdown for historical source links."""
+
+    __tablename__ = "paper_versions"
+    paper_id: Mapped[str] = mapped_column(ForeignKey("papers.id"), primary_key=True)
+    version: Mapped[int] = mapped_column(Integer, primary_key=True)
+    file_path: Mapped[str] = mapped_column(Text)
+    markdown_path: Mapped[str] = mapped_column(Text)
+    original_filename: Mapped[str] = mapped_column(String(500))
+    media_type: Mapped[str] = mapped_column(String(100))
+    source_file_hash: Mapped[str] = mapped_column(String(64))
 
 
 class ChunkRow(Base):
@@ -74,9 +99,13 @@ class RubricRow(Base):
     name: Mapped[str] = mapped_column(String(255))
     description: Mapped[str] = mapped_column(Text, default="")
     version: Mapped[int] = mapped_column(Integer, default=1)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now, onupdate=utc_now,
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -111,9 +140,13 @@ class ReviewRow(Base):
     summary: Mapped[str] = mapped_column(Text, default="")
     reviewer_edits: Mapped[dict] = mapped_column(JSON, default=dict)
     approved_markdown: Mapped[str | None] = mapped_column(Text)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now, onupdate=utc_now,
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
     )
     deleted_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
 
@@ -136,19 +169,38 @@ class FindingRow(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     review_id: Mapped[str] = mapped_column(ForeignKey("reviews.id"), index=True)
     criterion_code: Mapped[str] = mapped_column(String(64), default="general")
+    kind: Mapped[str] = mapped_column(String(32), default="analysis")
+    compared_paper_ids: Mapped[list] = mapped_column(JSON, default=list)
     claim: Mapped[str] = mapped_column(Text)
     evidence: Mapped[list] = mapped_column(JSON, default=list)
     status: Mapped[str] = mapped_column(String(32), default="pending")
     verdict: Mapped[str] = mapped_column(Text, default="")
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
 
 
 class RunRow(Base):
     """Background execution state."""
 
     __tablename__ = "runs"
+    __table_args__ = (
+        Index(
+            "uq_runs_active_requested_review",
+            "requested_review_id",
+            unique=True,
+            sqlite_where=text("status IN ('queued', 'running', 'interrupted')"),
+            postgresql_where=text("status IN ('queued', 'running', 'interrupted')"),
+        ),
+    )
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     review_id: Mapped[str] = mapped_column(ForeignKey("reviews.id"), index=True)
+    requested_review_id: Mapped[str] = mapped_column(
+        ForeignKey("reviews.id"), index=True
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
     status: Mapped[str] = mapped_column(String(32), default="queued")
     step_count: Mapped[int] = mapped_column(Integer, default=0)
     usage: Mapped[dict] = mapped_column(JSON, default=dict)
@@ -172,7 +224,9 @@ class RunEventRow(Base):
     input_summary: Mapped[str] = mapped_column(Text, default="")
     output_summary: Mapped[str] = mapped_column(Text, default="")
     payload: Mapped[dict] = mapped_column(JSON, default=dict)
-    timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utc_now)
+    timestamp: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=utc_now
+    )
 
 
 class RunCheckpointRow(Base):
@@ -182,6 +236,7 @@ class RunCheckpointRow(Base):
     run_id: Mapped[str] = mapped_column(ForeignKey("runs.id"), primary_key=True)
     state_json: Mapped[dict] = mapped_column(JSON)
     updated_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=utc_now, onupdate=utc_now,
+        DateTime(timezone=True),
+        default=utc_now,
+        onupdate=utc_now,
     )
-

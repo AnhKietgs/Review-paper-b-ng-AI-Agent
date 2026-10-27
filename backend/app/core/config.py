@@ -27,4 +27,3 @@ class Settings:
             groq_api_key=os.getenv("GROQ_API_KEY") or None,
             groq_model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
         )
-

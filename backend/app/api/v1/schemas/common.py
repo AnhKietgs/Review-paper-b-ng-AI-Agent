@@ -8,4 +8,3 @@ class ErrorResponse(BaseModel):
 
     code: str
     detail: str
-

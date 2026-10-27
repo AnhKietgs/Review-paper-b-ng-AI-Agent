@@ -17,4 +17,3 @@ def health() -> dict[str, str]:
 def runtime() -> dict[str, str]:
     """Expose demo mode, never environment secrets."""
     return {"llm_mode": Settings.from_env().demo_llm_mode}
-

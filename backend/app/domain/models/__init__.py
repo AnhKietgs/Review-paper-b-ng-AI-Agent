@@ -1,2 +1,1 @@
 """Pure review entities."""
-

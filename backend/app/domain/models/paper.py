@@ -16,4 +16,3 @@ class PaperChunk:
     text_hash: str
     markdown_start: int
     markdown_end: int
-

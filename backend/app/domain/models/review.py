@@ -8,4 +8,3 @@ class ReviewStatus(StrEnum):
 
     DRAFT = "draft"
     APPROVED = "approved"
-

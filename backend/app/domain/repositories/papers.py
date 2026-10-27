@@ -2,15 +2,22 @@
 
 from typing import Protocol
 
-from app.infrastructure.persistence.orm_models import PaperRow
+from typing import Any
+
+PaperRow = Any
 
 
 class PaperRepository(Protocol):
     """Operations needed by PaperService."""
 
-    def add(self, paper: PaperRow) -> None: ...
+    def add(self, paper: PaperRow) -> None:
+        """Add records through the persistence adapter."""
+        ...
 
-    def get(self, paper_id: str) -> PaperRow | None: ...
+    def get(self, paper_id: str) -> PaperRow | None:
+        """Get records through the persistence adapter."""
+        ...
 
-    def list(self, limit: int, offset: int) -> tuple[list[PaperRow], int]: ...
-
+    def list(self, limit: int, offset: int) -> tuple[list[PaperRow], int]:
+        """List records through the persistence adapter."""
+        ...

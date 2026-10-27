@@ -41,11 +41,22 @@ class AgentRunner:
 
     def _graph(self, role: str):
         if role not in self.graphs:
-            self.graphs[role] = AgentFactory.build(role, self.llm)
+            model = (
+                self.llm.for_role(role)
+                if hasattr(self.llm, "for_role")
+                else self.llm
+            )
+            self.graphs[role] = AgentFactory.build(role, model)
         return self.graphs[role]
 
+    def _model_id(self, role: str) -> str:
+        """Expose only the selected model ID, never provider credentials."""
+        if hasattr(self.llm, "model_for"):
+            return self.llm.model_for(role)
+        return "fixture" if self.llm.__class__.__name__ == "FixtureClient" else "custom"
+
     def _invoke(self, state: RunState, role: str, context: dict) -> dict:
-        self._event(state, role, "agent_started")
+        self._event(state, role, "agent_started", model=self._model_id(role))
         state.call_counts[role] = state.call_counts.get(role, 0) + 1
         output = self._graph(role).invoke({"context": context})["output"]
         self._event(state, role, "agent_finished", "Structured output received")
@@ -244,7 +255,9 @@ class AgentRunner:
                 self._event(
                     state, "evidence_verifier", "agent_skipped", "No pending findings"
                 )
-        self._event(state, "supervisor", "agent_started")
+        self._event(
+            state, "supervisor", "agent_started", model=self._model_id("supervisor")
+        )
         state.call_counts["supervisor"] = state.call_counts.get("supervisor", 0) + 1
         action = Supervisor(self._graph("supervisor")).decide(state)
         self._event(

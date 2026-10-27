@@ -1,15 +1,49 @@
+# Secrets and local environment files. Keep the safe template in Git.
 .env
+.env.*
+!.env.example
+!.env.*.example
+
+# Local agent/workflow state.
 .superpowers/
 .archify/
+.docs/
+
+# Python bytecode, virtual environments, and tool caches.
 __pycache__/
 *.py[cod]
-.pytest_cache/
-.pylint.d/
+*$py.class
 .venv/
+venv/
+env/
+.pytest_cache/
+.pytest-review-*/
+.pylint.d/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+
+# Node/Next.js generated files and test output.
 node_modules/
 .next/
+out/
+coverage/
 playwright-report/
 test-results/
-data/
-*.sqlite3
 
+# Local uploads, converted documents, databases, and logs.
+data/
+uploads/
+*.sqlite
+*.sqlite3
+*.db
+*.log
+
+# Editor and operating-system metadata.
+.idea/
+.vscode/
+.DS_Store
+Thumbs.db
+desktop.ini

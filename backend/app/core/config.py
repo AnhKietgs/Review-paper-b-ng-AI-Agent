@@ -13,7 +13,11 @@ class Settings:
     data_dir: Path
     demo_llm_mode: Literal["fixture", "groq"]
     groq_api_key: str | None
-    groq_model: str
+    groq_supervisor_model: str
+    groq_scientific_review_model: str
+    groq_related_work_model: str
+    groq_evidence_verifier_model: str
+    groq_rate_limit_wait_seconds: int
 
     @classmethod
     def from_env(cls) -> "Settings":
@@ -25,5 +29,19 @@ class Settings:
             data_dir=Path(os.getenv("DATA_DIR", "data")),
             demo_llm_mode=mode,
             groq_api_key=os.getenv("GROQ_API_KEY") or None,
-            groq_model=os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile"),
+            groq_supervisor_model=os.getenv(
+                "GROQ_SUPERVISOR_MODEL", "openai/gpt-oss-20b"
+            ),
+            groq_scientific_review_model=os.getenv(
+                "GROQ_SCIENTIFIC_REVIEW_MODEL", "openai/gpt-oss-120b"
+            ),
+            groq_related_work_model=os.getenv(
+                "GROQ_RELATED_WORK_MODEL", "openai/gpt-oss-20b"
+            ),
+            groq_evidence_verifier_model=os.getenv(
+                "GROQ_EVIDENCE_VERIFIER_MODEL", "openai/gpt-oss-20b"
+            ),
+            groq_rate_limit_wait_seconds=max(
+                1, int(os.getenv("GROQ_RATE_LIMIT_WAIT_SECONDS", "60"))
+            ),
         )

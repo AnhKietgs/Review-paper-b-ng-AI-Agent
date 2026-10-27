@@ -13,7 +13,13 @@ class GroqClient:
     """Call configured Groq model without exposing credentials in failures."""
 
     def __init__(
-        self, api_key: str, model: str, completion=None, sleep=time.sleep, on_retry=None
+        self,
+        api_key: str,
+        model: str,
+        completion=None,
+        sleep=time.sleep,
+        on_retry=None,
+        rate_limit_wait_seconds: int = 60,
     ):
         self.model = model
         self._completion = (
@@ -26,6 +32,7 @@ class GroqClient:
         )
         self._sleep = sleep
         self._on_retry = on_retry
+        self._rate_limit_wait_seconds = max(1, rate_limit_wait_seconds)
         self.usage = {"calls": 0, "tokens": 0}
 
     def _request(self, messages):
@@ -45,8 +52,8 @@ class GroqClient:
                 if attempt == 2:
                     raise LLMFailure("rate_limited") from exc
                 if self._on_retry:
-                    self._on_retry(attempt + 1)
-                self._sleep(min(2**attempt, 4))
+                    self._on_retry(attempt + 1, self._rate_limit_wait_seconds)
+                self._sleep(self._rate_limit_wait_seconds)
             except APIError as exc:
                 raise LLMFailure("provider_unavailable") from exc
         raise LLMFailure("provider_unavailable")

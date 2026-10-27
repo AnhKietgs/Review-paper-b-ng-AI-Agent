@@ -7,7 +7,7 @@ The stack is FastAPI, Next.js/Node.js, LangGraph and Groq API. Four logical agen
 ## Run locally with Docker Desktop
 
 1. Install and start Docker Desktop.
-2. Copy `.env.example` to `.env`. The default `DEMO_LLM_MODE=fixture` runs without an API key. To use Groq, set `DEMO_LLM_MODE=groq` and provide `GROQ_API_KEY` in `.env`. The key is passed to the backend only.
+2. Copy `.env.example` to `.env`. The default `DEMO_LLM_MODE=fixture` runs without an API key. To use Groq, set `DEMO_LLM_MODE=groq` and provide `GROQ_API_KEY` in `.env`. The key is passed to the backend only. Groq models are configurable per agent with `GROQ_SUPERVISOR_MODEL`, `GROQ_SCIENTIFIC_REVIEW_MODEL`, `GROQ_RELATED_WORK_MODEL` and `GROQ_EVIDENCE_VERIFIER_MODEL`. `GROQ_RATE_LIMIT_WAIT_SECONDS` defaults to `60`; the worker waits that long before retrying a rate-limited request, up to two retries.
 3. From the repository root, run:
 
    ```powershell

@@ -5,7 +5,11 @@ services:
       DATA_DIR: /app/data
       DEMO_LLM_MODE: ${DEMO_LLM_MODE:-fixture}
       GROQ_API_KEY: ${GROQ_API_KEY:-}
-      GROQ_MODEL: ${GROQ_MODEL:-llama-3.3-70b-versatile}
+      GROQ_SUPERVISOR_MODEL: ${GROQ_SUPERVISOR_MODEL:-openai/gpt-oss-20b}
+      GROQ_SCIENTIFIC_REVIEW_MODEL: ${GROQ_SCIENTIFIC_REVIEW_MODEL:-openai/gpt-oss-120b}
+      GROQ_RELATED_WORK_MODEL: ${GROQ_RELATED_WORK_MODEL:-openai/gpt-oss-20b}
+      GROQ_EVIDENCE_VERIFIER_MODEL: ${GROQ_EVIDENCE_VERIFIER_MODEL:-openai/gpt-oss-20b}
+      GROQ_RATE_LIMIT_WAIT_SECONDS: ${GROQ_RATE_LIMIT_WAIT_SECONDS:-60}
     volumes:
       - app_data:/app/data
       - ./demo_data:/app/demo_data:ro

@@ -12,6 +12,7 @@ from app.harness.memory import RunMemory
 from app.harness.runner import AgentRunner
 from app.infrastructure.groq.client import GroqClient
 from app.infrastructure.groq.fixture_client import FixtureClient
+from app.infrastructure.groq.router import GroqRouter
 from app.infrastructure.persistence.orm_models import FindingRow, ReviewRow, RunRow
 from app.infrastructure.persistence.source_catalog import SqlSourceCatalog
 from app.infrastructure.persistence.unit_of_work import UnitOfWork
@@ -182,17 +183,42 @@ class RunWorker:
                 if state.llm_mode == "groq":
                     if not settings.groq_api_key:
                         raise LLMFailure("missing_groq_key")
-                    llm = GroqClient(
-                        settings.groq_api_key,
-                        settings.groq_model,
-                        on_retry=lambda attempt: events.append(
-                            run_id,
-                            RunEventInput(
-                                agent="groq",
-                                action="provider_retry",
-                                output_summary=f"Rate limited; retry {attempt}/2",
-                            ),
-                        ),
+
+                    def retry_event(role: str):
+                        def record(attempt: int, wait_seconds: int) -> None:
+                            events.append(
+                                run_id,
+                                RunEventInput(
+                                    agent=role,
+                                    action="provider_retry",
+                                    output_summary=(
+                                        f"Rate limited; waiting {wait_seconds}s, "
+                                        f"then retry {attempt}/2"
+                                    ),
+                                    payload={"wait_seconds": wait_seconds},
+                                ),
+                            )
+
+                        return record
+
+                    models = {
+                        "supervisor": settings.groq_supervisor_model,
+                        "scientific_review": settings.groq_scientific_review_model,
+                        "related_work": settings.groq_related_work_model,
+                        "evidence_verifier": settings.groq_evidence_verifier_model,
+                    }
+                    llm = GroqRouter(
+                        {
+                            role: GroqClient(
+                                settings.groq_api_key,
+                                model,
+                                rate_limit_wait_seconds=(
+                                    settings.groq_rate_limit_wait_seconds
+                                ),
+                                on_retry=retry_event(role),
+                            )
+                            for role, model in models.items()
+                        }
                     )
                 state = AgentRunner(llm, catalog, memory, events).run_turn(state)
             except Exception as exc:  # pylint: disable=broad-exception-caught
